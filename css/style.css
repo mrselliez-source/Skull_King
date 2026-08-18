@@ -29,12 +29,21 @@ body {
   min-height: 100vh;
 }
 
+/* Page de jeu : tient dans la hauteur de l'écran, pas de scroll de la page —
+   c'est le plateau (flex:1) qui absorbe les variations de hauteur. */
+body.game-page {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
 h1, h2 {
   font-family: 'Pirata One', serif;
   font-weight: 400;
   letter-spacing: 0.5px;
   margin: 0 0 12px;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  flex-shrink: 0;
 }
 
 h1 { font-size: 2.6rem; }
@@ -49,7 +58,11 @@ h2 { font-size: 1.6rem; }
 .game {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 16px 12px 60px;
+  padding: 10px 12px;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .subtitle { opacity: 0.85; margin-bottom: 24px; }
@@ -94,17 +107,28 @@ button:active:not(:disabled) {
 
 button:disabled { opacity: 0.5; cursor: default; }
 
-.error { color: var(--danger); min-height: 20px; font-weight: 700; }
+.error { color: var(--danger); min-height: 20px; font-weight: 700; flex-shrink: 0; }
 
 .hidden { display: none !important; }
+
+/* Chaque vue (mise/jeu/...) prend le reste de la hauteur disponible dans
+   .game ; le plateau à l'intérieur (flex:1) absorbe le surplus/manque de
+   place, pour que rien ne pousse la page à défiler. */
+.view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
 .game-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   font-family: 'Pirata One', serif;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .room-code strong { color: var(--rope); letter-spacing: 1px; }
@@ -182,7 +206,8 @@ button:disabled { opacity: 0.5; cursor: default; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .score-chip {
@@ -269,15 +294,21 @@ button:disabled { opacity: 0.5; cursor: default; }
 .card-face.has-image .card-label,
 .card-face.has-image.face-down::after { visibility: hidden; }
 
-/* --- Table surface : le pont du bateau, planches de bois + liseré de corde --- */
+/* --- Table surface : le pont du bateau, planches de bois + liseré de corde ---
+   flex:1 = prend tout l'espace vertical restant dans la vue, quelle que soit
+   la hauteur d'écran disponible ; ses propres enfants (rangée d'adversaires /
+   pli / main) sont eux-mêmes en colonne flex pour se répartir cet espace. */
 .table-surface {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
   border: 12px solid var(--rope);
-  border-radius: 50% / 34%;
-  padding: 28px 16px 260px;
-  margin: 16px 0 60px;
-  min-height: 65vh;
+  border-radius: 34px;
+  padding: 16px;
+  margin: 8px 0;
   box-shadow:
     inset 0 0 0 3px var(--rope-dark),
     inset 0 0 50px rgba(0,0,0,0.55),
@@ -302,6 +333,7 @@ button:disabled { opacity: 0.5; cursor: default; }
   flex-wrap: wrap;
   gap: 16px;
   padding-top: 4px;
+  flex-shrink: 0;
 }
 
 .opponent {
@@ -340,12 +372,17 @@ button:disabled { opacity: 0.5; cursor: default; }
 .trick-area {
   position: relative;
   display: flex;
+  flex: 1;
+  width: 100%;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 20px;
-  min-height: 185px;
-  margin: 16px auto 28px;
+  /* Doit rester au moins aussi haute qu'une carte + son étiquette de nom,
+     sinon son propre contenu (qui ne rétrécit pas) déborde sur la main
+     juste en dessous. */
+  min-height: 168px;
+  margin: 8px 0;
 }
 
 .trick-play { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -354,9 +391,11 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 .hand-fan {
   position: relative;
+  width: 100%;
   height: 220px;
   margin: 0 auto;
   max-width: 720px;
+  flex-shrink: 0;
 }
 
 .hand-fan .card-face {
@@ -401,36 +440,60 @@ button:disabled { opacity: 0.5; cursor: default; }
   box-shadow: 0 20px 50px rgba(0,0,0,0.7);
 }
 
-.bid-picker { display: flex; gap: 8px; align-items: center; }
+.bid-picker { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
 .turn-indicator {
   font-family: 'Pirata One', serif;
   font-size: 20px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  flex-shrink: 0;
 }
 
 .round-starter {
   font-size: 13px;
   opacity: 0.85;
-  margin: -4px 0 10px;
+  margin: 0 0 6px;
+  flex-shrink: 0;
 }
 
 .my-bid-indicator {
   font-size: 14px;
   opacity: 0.9;
-  margin: -4px 0 10px;
+  margin: 0 0 6px;
+  flex-shrink: 0;
 }
 
 .wildcard-choice {
-  margin-top: 16px;
+  margin-top: 8px;
   padding: 12px;
   background: linear-gradient(180deg, rgba(122,84,50,0.4), rgba(91,61,34,0.4));
   border: 1px solid var(--rope-dark);
   border-radius: 6px;
+  flex-shrink: 0;
 }
 .wildcard-choice button { display: block; width: 100%; margin-bottom: 8px; }
 
-.hint { opacity: 0.8; font-size: 14px; }
+.hint { opacity: 0.8; font-size: 14px; flex-shrink: 0; }
 
 #finalScoreboard ol { padding-left: 24px; font-size: 18px; font-family: 'Pirata One', serif; }
+
+/* Petits écrans : cartes un peu plus compactes pour que plus de cartes
+   tiennent sur une ligne (moins de chances que le pli passe sur 2 rangées
+   et empiète sur la main) et pour laisser plus de place verticale au plateau. */
+@media (max-width: 480px) {
+  .card-face { width: 82px; height: 121px; font-size: 24px; }
+  .card-face[class*="special-"] { font-size: 14px; }
+  .trick-play .card-face { width: 76px; height: 112px; font-size: 21px; }
+  .trick-area { min-height: 132px; gap: 12px; }
+  .opponents-row { gap: 6px 10px; }
+  .opponent { padding: 4px 6px; }
+  .mini-fan { width: 56px; height: 32px; }
+  .opponent-name { font-size: 13px; }
+  .opponent-status { font-size: 10px; }
+  .game { padding: 6px 8px; }
+  .game-header { margin-bottom: 4px; }
+  .scoreboard { margin-bottom: 6px; gap: 5px; }
+  .score-chip { padding: 3px 8px; font-size: 12px; }
+  .table-surface { padding: 10px; border-width: 8px; }
+}

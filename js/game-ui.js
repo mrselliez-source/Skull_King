@@ -183,8 +183,8 @@ function layoutFan(container) {
   const backCount = Math.ceil(n / 2);
   const backRow = cardEls.slice(0, backCount);
   const frontRow = cardEls.slice(backCount);
-  container.style.height = '340px';
-  layoutFanRow(backRow, containerWidth, cardWidth, 95, 0);
+  container.style.height = '300px';
+  layoutFanRow(backRow, containerWidth, cardWidth, 80, 0);
   layoutFanRow(frontRow, containerWidth, cardWidth, 0, 100);
 }
 
