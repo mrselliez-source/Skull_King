@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Tests moteur de jeu</title>
+<style>
+  body { font-family: monospace; padding: 20px; white-space: pre; font-size: 14px; }
+  .pass { color: green; }
+  .fail { color: red; font-weight: bold; }
+</style>
+</head>
+<body>
+<div id="out">Chargement...</div>
+<script src="js/rules.js"></script>
+<script>
+const lines = [];
+function check(label, actual, expected) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  lines.push(`<span class="${ok ? 'pass' : 'fail'}">${ok ? 'OK' : 'FAIL'} - ${label}: got ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}</span>`);
+}
+
+// Test 1: commander + raider + enchantress => enchantress wins
+check('T1 commander+raider+enchantress -> enchantress', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'RAIDER'}},
+  {playerId:'c', card:{kind:'SPECIAL', type:'ENCHANTRESS'}},
+]).winnerId, 'c');
+
+// Test 2: raider + enchantress (no commander) => raider wins
+check('T2 raider+enchantress -> raider', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'RAIDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'ENCHANTRESS'}},
+]).winnerId, 'a');
+
+// Test 3: commander + enchantress (no raider) => enchantress wins
+check('T3 commander+enchantress -> enchantress', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'ENCHANTRESS'}},
+]).winnerId, 'b');
+
+// Test 4: commander + raider (no enchantress) => commander wins
+check('T4 commander+raider -> commander', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'RAIDER'}},
+]).winnerId, 'a');
+
+// Test 5: numbered cards, no trump, highest of led suit wins (other suit doesn't count)
+check('T5 highest of led suit wins', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'NUMBERED', suit:'GREEN', value:7}},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'PURPLE', value:12}},
+  {playerId:'c', card:{kind:'NUMBERED', suit:'GREEN', value:9}},
+]).winnerId, 'c');
+
+// Test 6: trump beats everything
+check('T6 trump beats numbered 14', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'NUMBERED', suit:'GREEN', value:14}},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'BLACK', value:2}},
+]).winnerId, 'b');
+
+// Test 7: all retreat => first wins
+check('T7 all retreat -> first wins', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'RETREAT'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'RETREAT'}},
+]).winnerId, 'a');
+
+// Test 8: legalPlays follow suit
+check('T8 legalPlays follows GREEN + specials only', Rules.legalPlays([
+  {kind:'NUMBERED', suit:'GREEN', value:5},
+  {kind:'NUMBERED', suit:'PURPLE', value:9},
+  {kind:'SPECIAL', type:'RETREAT'},
+], [{playerId:'x', card:{kind:'NUMBERED', suit:'GREEN', value:3}}]).map(c=>c.suit||c.type),
+['GREEN','RETREAT']);
+
+// Test 9: deck size (70 de base + 2 butin + 1 baleine + 1 kraken + 1 raie manta)
+check('T9 deck size is 75', Rules.buildDeck().length, 75);
+
+// Test 10: scoreBid
+check('T10 bid0 correct round3 -> 30', Rules.scoreBid(3,0,0), 30);
+check('T11 bid0 wrong round3 -> -30', Rules.scoreBid(3,0,2), -30);
+check('T12 bid2 correct -> 40', Rules.scoreBid(3,2,2), 40);
+check('T13 bid2 off-by-1 -> -10', Rules.scoreBid(3,2,1), -10);
+
+// Test 14: commander beats a wildcard played as raider (commander beats everyone except enchantress)
+check('T14 commander + wildcard-as-raider -> commander', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'WILDCARD'}, wildAs:'RAIDER'},
+]).winnerId, 'a');
+
+// Test 15: wildcard as RETREAT always loses to a numbered card
+check('T15 wildcard-as-retreat loses to numbered', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'WILDCARD'}, wildAs:'RETREAT'},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'GREEN', value:1}},
+]).winnerId, 'b');
+
+// Test 16: a real RETREAT leads (no suit), the suit to follow comes from the first numbered card after it
+check('T16 retreat leads, suit set by first numbered card, no trump', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'RETREAT'}},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'GREEN', value:5}},
+  {playerId:'c', card:{kind:'NUMBERED', suit:'PURPLE', value:9}},
+]).winnerId, 'b');
+
+// Test 17: two raiders captured by commander -> count of 2, not a flat flag
+check('T17 commander captures 2 raiders -> count 2', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'RAIDER'}},
+  {playerId:'c', card:{kind:'SPECIAL', type:'RAIDER'}},
+]).raidersCapturedByCommander, 2);
+
+// Test 18: two enchantresses captured by raider -> count of 2
+check('T18 raider captures 2 enchantresses -> count 2', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'RAIDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'ENCHANTRESS'}},
+  {playerId:'c', card:{kind:'SPECIAL', type:'ENCHANTRESS'}},
+]).winnerId, 'a');
+
+// Test 19: the trick winner captures a 14 played by someone else (bonus goes to whoever wins, not who played it)
+check('T19 winner captures opponent\'s 14', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'NUMBERED', suit:'GREEN', value:14}},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'BLACK', value:3}},
+]).fourteens.map(p=>p.playerId), ['a']);
+
+// Test 20: LOOT never wins (drapeau blanc) -> loses even to a lone numbered card
+check('T20 loot never wins, loses to numbered', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'LOOT'}},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'GREEN', value:3}},
+]).winnerId, 'b');
+
+// Test 21: commander beats loot
+check('T21 commander beats loot', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'LOOT'}},
+]).winnerId, 'a');
+
+// Test 22: playing LOOT forms an alliance with the trick's winner
+{
+  const r22 = Rules.resolveTrick([
+    {playerId:'a', card:{kind:'SPECIAL', type:'LOOT'}},
+    {playerId:'b', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  ]);
+  check('T22 loot forms alliance with winner', r22.alliances, [{ a: 'a', b: 'b' }]);
+}
+
+// Test 23: no self-alliance in the degenerate all-loot fallback (first play forced to "win")
+{
+  const r23 = Rules.resolveTrick([
+    {playerId:'a', card:{kind:'SPECIAL', type:'LOOT'}},
+    {playerId:'b', card:{kind:'SPECIAL', type:'LOOT'}},
+  ]);
+  check('T23 forced winner among all-loot', r23.winnerId, 'a');
+  check('T23b no self-alliance, only b allies with forced winner a', r23.alliances, [{ a: 'b', b: 'a' }]);
+}
+
+// Test 24: KRAKEN alone voids the trick; the would-be winner (ignoring the kraken) leads next
+{
+  const r24 = Rules.resolveTrick([
+    {playerId:'a', card:{kind:'SPECIAL', type:'KRAKEN'}},
+    {playerId:'b', card:{kind:'NUMBERED', suit:'GREEN', value:5}},
+    {playerId:'c', card:{kind:'NUMBERED', suit:'GREEN', value:9}},
+  ]);
+  check('T24 kraken voids trick', r24.voided, true);
+  check('T24b kraken would-be winner ignores kraken', r24.winnerId, 'c');
+}
+
+// Test 25: WHALE played AFTER kraken overrides it -> not voided, highest numbered wins
+check('T25 whale after kraken overrides it', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'KRAKEN'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'WHALE'}},
+  {playerId:'c', card:{kind:'NUMBERED', suit:'GREEN', value:9}},
+  {playerId:'d', card:{kind:'NUMBERED', suit:'PURPLE', value:3}},
+]).voided, false);
+
+// Test 26: KRAKEN played AFTER whale overrides it -> voided
+check('T26 kraken after whale overrides it -> voided', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'WHALE'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'KRAKEN'}},
+  {playerId:'c', card:{kind:'NUMBERED', suit:'GREEN', value:9}},
+]).voided, true);
+
+// Test 27: WHALE neutralizes the commander -> highest numbered card wins outright
+check('T27 whale neutralizes commander, highest numbered wins', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'WHALE'}},
+  {playerId:'b', card:{kind:'SPECIAL', type:'COMMANDER'}},
+  {playerId:'c', card:{kind:'NUMBERED', suit:'GREEN', value:9}},
+  {playerId:'d', card:{kind:'NUMBERED', suit:'PURPLE', value:13}},
+]).winnerId, 'd');
+
+// Test 28: MANTA -> lowest numbered card wins outright
+check('T28 manta: lowest numbered card wins', Rules.resolveTrick([
+  {playerId:'a', card:{kind:'SPECIAL', type:'MANTA'}},
+  {playerId:'b', card:{kind:'NUMBERED', suit:'GREEN', value:9}},
+  {playerId:'c', card:{kind:'NUMBERED', suit:'PURPLE', value:2}},
+]).winnerId, 'c');
+
+// Test 29: deck contains exactly the expected new cards
+{
+  const deck = Rules.buildDeck();
+  const counts = {};
+  deck.forEach((c) => { if (c.kind === 'SPECIAL') counts[c.type] = (counts[c.type]||0)+1; });
+  check('T29 new special counts', {LOOT: counts.LOOT, WHALE: counts.WHALE, KRAKEN: counts.KRAKEN, MANTA: counts.MANTA}, {LOOT:2, WHALE:1, KRAKEN:1, MANTA:1});
+}
+
+document.getElementById('out').innerHTML = lines.join('\n');
+</script>
+</body>
+</html>

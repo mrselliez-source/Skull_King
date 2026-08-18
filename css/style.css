@@ -1,0 +1,316 @@
+:root {
+  --sea-deep: #0a1c22;
+  --sea-mid: #123640;
+  --deck: #7a5432;
+  --deck-dark: #5b3d22;
+  --deck-seam: #462f1a;
+  --rope: #c9a15a;
+  --rope-dark: #8a6a3c;
+  --parchment: #f0e4c8;
+  --ink: #f4ecd8;
+  --ink-dark: #2a1c10;
+  --green: #3f7a4a;
+  --purple: #6b3f8a;
+  --yellow: #c68f2e;
+  --black: #1a1a1a;
+  --disruptor: #2c6b78;
+  --danger: #ff7a68;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Special Elite', 'Courier New', monospace;
+  background:
+    radial-gradient(ellipse at 50% -10%, var(--sea-mid) 0%, var(--sea-deep) 65%);
+  background-attachment: fixed;
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+h1, h2 {
+  font-family: 'Pirata One', serif;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+h1 { font-size: 2.6rem; }
+h2 { font-size: 1.6rem; }
+
+.lobby, .game {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.subtitle { opacity: 0.85; margin-bottom: 24px; }
+
+.card {
+  background: linear-gradient(180deg, rgba(122,84,50,0.35), rgba(91,61,34,0.35));
+  border: 1px solid var(--rope-dark);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 3px 8px rgba(0,0,0,0.35);
+}
+
+input, select, button {
+  font-size: 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--rope-dark);
+  background: var(--parchment);
+  color: var(--ink-dark);
+  font-family: 'Special Elite', 'Courier New', monospace;
+}
+
+input { width: 100%; margin-bottom: 10px; }
+
+button {
+  background: linear-gradient(180deg, var(--rope) 0%, var(--rope-dark) 100%);
+  border: 1px solid var(--ink-dark);
+  color: var(--ink-dark);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  margin-top: 4px;
+  box-shadow: 0 2px 0 var(--ink-dark), 0 4px 8px rgba(0,0,0,0.4);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--ink-dark), 0 2px 4px rgba(0,0,0,0.4);
+}
+
+button:disabled { opacity: 0.5; cursor: default; }
+
+.error { color: var(--danger); min-height: 20px; font-weight: 700; }
+
+.hidden { display: none !important; }
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: 'Pirata One', serif;
+  font-size: 1.1rem;
+}
+
+.room-code strong { color: var(--rope); letter-spacing: 1px; }
+
+.scoreboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.score-chip {
+  background: linear-gradient(180deg, #dcb768 0%, #a9803c 100%);
+  color: var(--ink-dark);
+  border: 1px solid var(--ink-dark);
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 3px rgba(0,0,0,0.35);
+}
+
+.player-list { padding-left: 20px; }
+
+.card-face {
+  width: 60px;
+  height: 88px;
+  border-radius: 6px;
+  border: 2px solid var(--deck-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  background: var(--parchment) url('../images/textures/parchment.jpg') center / cover;
+  color: var(--ink-dark);
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  padding: 4px;
+  box-shadow: inset 0 0 10px rgba(120,80,30,0.3), 0 2px 6px rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-face.disabled { opacity: 0.5; cursor: default; }
+
+.card-face.face-down,
+.mini-card-back {
+  background: repeating-linear-gradient(135deg, var(--deck-dark), var(--deck-dark) 6px, var(--ink-dark) 6px, var(--ink-dark) 12px);
+}
+.card-face.face-down::after {
+  content: '\2620';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--rope);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+.card-face.suit-GREEN { border-color: var(--green); color: var(--green); }
+.card-face.suit-PURPLE { border-color: var(--purple); color: var(--purple); }
+.card-face.suit-YELLOW { border-color: var(--yellow); color: #8a5f14; }
+.card-face.suit-BLACK { border-color: var(--black); background: #221a10; color: var(--ink); }
+
+.card-face[class*="special-"] { background: var(--rope); color: var(--ink-dark); font-size: 11px; border-color: var(--rope-dark); }
+
+/* Cartes "perturbatrices" (annulent/renversent le pli) : distinguées visuellement des cartes tactiques */
+.card-face.special-WHALE,
+.card-face.special-KRAKEN,
+.card-face.special-MANTA { background: var(--disruptor); color: var(--ink); border-color: #163b42; }
+
+.card-label { line-height: 1.15; word-break: break-word; hyphens: auto; }
+
+/* Ton visuel perso (images/cards/*.png) recouvre le rendu par défaut dès
+   qu'il est présent — voir images/cards/README.md */
+.card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+.has-image .card-img { display: block; }
+.card-face.has-image .card-value,
+.card-face.has-image .card-label,
+.card-face.has-image.face-down::after { visibility: hidden; }
+
+/* --- Table surface : le pont du bateau, planches de bois + liseré de corde --- */
+.table-surface {
+  position: relative;
+  background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
+  border: 12px solid var(--rope);
+  border-radius: 50% / 34%;
+  padding: 28px 16px 100px;
+  margin: 16px 0 60px;
+  min-height: 320px;
+  box-shadow:
+    inset 0 0 0 3px var(--rope-dark),
+    inset 0 0 50px rgba(0,0,0,0.55),
+    0 12px 28px rgba(0,0,0,0.5);
+  animation: deck-sway 7s ease-in-out infinite;
+  transform-origin: 50% 120%;
+}
+
+@keyframes deck-sway {
+  0%, 100% { transform: rotate(-0.35deg); }
+  50% { transform: rotate(0.35deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-surface { animation: none; }
+}
+
+.opponents-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.opponent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.opponent.active { background: rgba(201,161,90,0.22); }
+.opponent.active .opponent-name { color: var(--rope); }
+
+.opponent-name { font-family: 'Pirata One', serif; font-size: 15px; }
+.opponent-status { font-size: 11px; opacity: 0.9; }
+
+.mini-fan {
+  position: relative;
+  height: 38px;
+  width: 70px;
+}
+
+.mini-card-back {
+  position: absolute;
+  width: 22px;
+  height: 32px;
+  border-radius: 3px;
+  border: 1px solid var(--ink-dark);
+  left: 50%;
+  top: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+.trick-area {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  min-height: 100px;
+  margin: 12px auto;
+}
+
+.trick-play { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.trick-play .card-face { width: 56px; height: 82px; cursor: default; }
+.trick-play-name { font-size: 12px; opacity: 0.9; color: var(--ink); }
+
+.hand-fan {
+  position: relative;
+  height: 128px;
+  margin: 0 auto;
+  max-width: 480px;
+}
+
+.hand-fan .card-face {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotate(var(--rot, 0deg)) translateY(var(--lift, 0px));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hand-fan .card-face:not(.disabled):hover {
+  transform: translateX(-50%) rotate(var(--rot, 0deg)) translateY(calc(var(--lift, 0px) - 16px));
+  box-shadow: 0 10px 18px rgba(0,0,0,0.55);
+}
+
+.bid-picker { display: flex; gap: 8px; align-items: center; }
+
+.turn-indicator {
+  font-family: 'Pirata One', serif;
+  font-size: 20px;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.wildcard-choice {
+  margin-top: 16px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(122,84,50,0.4), rgba(91,61,34,0.4));
+  border: 1px solid var(--rope-dark);
+  border-radius: 6px;
+}
+.wildcard-choice button { display: block; width: 100%; margin-bottom: 8px; }
+
+.hint { opacity: 0.8; font-size: 14px; }
+
+#finalScoreboard ol { padding-left: 24px; font-size: 18px; font-family: 'Pirata One', serif; }
