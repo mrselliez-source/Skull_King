@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Partie en cours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Special+Elite&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<main class="game">
+  <header class="game-header">
+    <div class="room-code">Salle : <strong id="roomCodeLabel">…</strong></div>
+    <div id="roundLabel" class="round-label"></div>
+  </header>
+
+  <section id="scoreboard" class="scoreboard"></section>
+
+  <section id="lobbyView" class="view hidden">
+    <h2>Salle d'attente</h2>
+    <p>Partage ce code à tes amis : <strong id="shareCode"></strong></p>
+    <ul id="playerList" class="player-list"></ul>
+    <button id="startBtn" class="hidden">Lancer la partie</button>
+    <p id="waitingHostMsg" class="hint hidden">En attente que l'hôte lance la partie...</p>
+  </section>
+
+  <section id="biddingView" class="view hidden">
+    <h2>À combien de plis penses-tu gagner ?</h2>
+    <div class="table-surface">
+      <div id="opponentsRowBid" class="opponents-row"></div>
+      <div id="handDisplay" class="hand-fan"></div>
+    </div>
+    <div class="bid-picker">
+      <select id="bidSelect"></select>
+      <button id="bidBtn">Valider ma mise</button>
+    </div>
+    <p id="bidStatus" class="hint"></p>
+  </section>
+
+  <section id="playingView" class="view hidden">
+    <div id="turnIndicator" class="turn-indicator"></div>
+    <div class="table-surface">
+      <div id="opponentsRow" class="opponents-row"></div>
+      <div id="trickArea" class="trick-area"></div>
+      <div id="handDisplayPlay" class="hand-fan"></div>
+    </div>
+    <div id="wildcardChoice" class="wildcard-choice hidden">
+      <p>Cette carte Tigresse : la jouer comme...</p>
+      <button id="wildRaiderBtn">Pirate (bat tout sauf Commandant)</button>
+      <button id="wildRetreatBtn">Repli (perd toujours)</button>
+    </div>
+  </section>
+
+  <section id="gameEndView" class="view hidden">
+    <h2>Partie terminée</h2>
+    <div id="finalScoreboard"></div>
+  </section>
+
+  <p id="errorMsg" class="error"></p>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/room.js"></script>
+<script src="js/game-ui.js"></script>
+</body>
+</html>

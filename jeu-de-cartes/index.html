@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jeu de cartes en ligne</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Special+Elite&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<main class="lobby">
+  <h1>Jeu de cartes en ligne</h1>
+  <p class="subtitle">Joue en ligne avec tes amis, entre 2 et 8 joueurs.</p>
+
+  <section class="card">
+    <label for="playerName">Ton prénom</label>
+    <input id="playerName" type="text" maxlength="20" placeholder="Ex : Bastien" />
+  </section>
+
+  <section class="card">
+    <h2>Créer une partie</h2>
+    <button id="createBtn">Créer une salle</button>
+  </section>
+
+  <section class="card">
+    <h2>Rejoindre une partie</h2>
+    <input id="roomCodeInput" type="text" maxlength="5" placeholder="Code de la salle" style="text-transform: uppercase;" />
+    <button id="joinBtn">Rejoindre</button>
+  </section>
+
+  <p id="errorMsg" class="error"></p>
+  <p id="setupWarning" class="hint hidden">
+    ⚠️ Configuration Firebase manquante : remplis <code>js/firebase-config.js</code>
+    (voir README.md) avant de pouvoir créer/rejoindre une salle.
+  </p>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/room.js"></script>
+<script>
+if (firebaseConfig.apiKey === 'REMPLACE_MOI') {
+  document.getElementById('setupWarning').classList.remove('hidden');
+}
+const errorMsg = document.getElementById('errorMsg');
+const nameInput = document.getElementById('playerName');
+nameInput.value = localStorage.getItem('playerName') || '';
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+}
+
+document.getElementById('createBtn').addEventListener('click', async () => {
+  const name = nameInput.value.trim();
+  if (!name) return showError('Entre ton prénom d\'abord.');
+  showError('Création de la salle...');
+  try {
+    const { roomCode } = await Room.createRoom(name);
+    window.location.href = `game.html?room=${roomCode}`;
+  } catch (e) {
+    showError('Erreur : ' + e.message);
+  }
+});
+
+document.getElementById('joinBtn').addEventListener('click', async () => {
+  const name = nameInput.value.trim();
+  const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  if (!name) return showError('Entre ton prénom d\'abord.');
+  if (!code) return showError('Entre le code de la salle.');
+  showError('Connexion...');
+  try {
+    await Room.joinRoom(code, name);
+    window.location.href = `game.html?room=${code}`;
+  } catch (e) {
+    if (e.message === 'room-not-found') showError('Aucune salle avec ce code.');
+    else if (e.message === 'room-already-started') showError('Cette partie a déjà commencé.');
+    else if (e.message === 'room-full') showError('Salle complète (8 joueurs max).');
+    else showError('Erreur : ' + e.message);
+  }
+});
+</script>
+</body>
+</html>
