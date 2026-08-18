@@ -136,26 +136,56 @@ function playerName_(room, id) {
   return p ? p.name : '???';
 }
 
+// Dispose les cartes de `rowCards` en éventail (arc de cercle), centrées dans
+// un container de largeur `containerWidth`, décalées vers le haut de `rowLift`
+// et empilées au-dessus des z-index `zBase`+.
+function layoutFanRow(rowCards, containerWidth, cardWidth, rowLift, zBase) {
+  const n = rowCards.length;
+  if (n === 0) return;
+  const mid = (n - 1) / 2;
+  const anglePerCard = Math.min(9, Math.max(4, 44 / Math.max(n - 1, 1)));
+  // L'écart entre cartes ne doit jamais dépasser ce que l'écran permet
+  // d'afficher, sinon les cartes des extrémités sortent de l'écran quand la
+  // main est grande (ex. 10 cartes à la dernière manche).
+  const maxSpacingForWidth = n > 1 ? (containerWidth - cardWidth) / (n - 1) : containerWidth;
+  const spacing = Math.max(16, Math.min(126 - n * 7.5, maxSpacingForWidth));
+  const maxLift = 36;
+  rowCards.forEach((el, i) => {
+    const offset = i - mid;
+    const angle = offset * anglePerCard;
+    const normalized = mid > 0 ? Math.abs(offset) / mid : 0;
+    const lift = -maxLift * (1 - normalized * normalized * 0.75) - rowLift;
+    el.style.left = `calc(50% + ${offset * spacing}px)`;
+    el.style.setProperty('--rot', `${angle}deg`);
+    el.style.setProperty('--lift', `${lift}px`);
+    el.style.zIndex = String(zBase + i);
+  });
+}
+
 // Dispose des cartes déjà présentes dans `container` en éventail (arc de cercle),
-// la carte du milieu la plus haute, comme une main tenue à la table.
+// la carte du milieu la plus haute, comme une main tenue à la table. Au-delà
+// de 7 cartes, répartit sur deux rangées pour éviter de trop les écraser.
 function layoutFan(container) {
   const cardEls = Array.from(container.children);
   const n = cardEls.length;
   if (n === 0) return;
-  const mid = (n - 1) / 2;
-  const anglePerCard = Math.min(9, Math.max(4, 44 / Math.max(n - 1, 1)));
-  const spacing = Math.max(23, 100 - n * 6);
-  const maxLift = 29;
-  cardEls.forEach((el, i) => {
-    const offset = i - mid;
-    const angle = offset * anglePerCard;
-    const normalized = mid > 0 ? Math.abs(offset) / mid : 0;
-    const lift = -maxLift * (1 - normalized * normalized * 0.75);
-    el.style.left = `calc(50% + ${offset * spacing}px)`;
-    el.style.setProperty('--rot', `${angle}deg`);
-    el.style.setProperty('--lift', `${lift}px`);
-    el.style.zIndex = String(i);
-  });
+  const containerWidth = container.clientWidth || 300;
+  const cardWidth = (cardEls[0] && cardEls[0].offsetWidth) || 108;
+
+  const ROW_THRESHOLD = 7;
+  if (n <= ROW_THRESHOLD) {
+    container.style.height = '';
+    layoutFanRow(cardEls, containerWidth, cardWidth, 0, 0);
+    return;
+  }
+
+  // Rangée du fond (moins de cartes, décalée vers le haut) + rangée de devant.
+  const backCount = Math.ceil(n / 2);
+  const backRow = cardEls.slice(0, backCount);
+  const frontRow = cardEls.slice(backCount);
+  container.style.height = '340px';
+  layoutFanRow(backRow, containerWidth, cardWidth, 95, 0);
+  layoutFanRow(frontRow, containerWidth, cardWidth, 0, 100);
 }
 
 // Affiche les autres joueurs autour de la table : mini-éventail de cartes

@@ -40,10 +40,16 @@ h1, h2 {
 h1 { font-size: 2.6rem; }
 h2 { font-size: 1.6rem; }
 
-.lobby, .game {
+.lobby {
   max-width: 640px;
   margin: 0 auto;
   padding: 24px 16px 80px;
+}
+
+.game {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 12px 60px;
 }
 
 .subtitle { opacity: 0.85; margin-bottom: 24px; }
@@ -192,15 +198,15 @@ button:disabled { opacity: 0.5; cursor: default; }
 .player-list { padding-left: 20px; }
 
 .card-face {
-  width: 86px;
-  height: 127px;
-  border-radius: 8px;
+  width: 108px;
+  height: 159px;
+  border-radius: 10px;
   border: 2px solid var(--deck-dark);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 26px;
+  font-size: 32px;
   background: var(--parchment) url('../images/textures/parchment.jpg') center / cover;
   color: var(--ink-dark);
   cursor: pointer;
@@ -239,7 +245,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .card-face.suit-YELLOW { border-color: var(--yellow); color: #8a5f14; }
 .card-face.suit-BLACK { border-color: var(--black); background: #221a10; color: var(--ink); }
 
-.card-face[class*="special-"] { background: var(--rope); color: var(--ink-dark); font-size: 15px; border-color: var(--rope-dark); }
+.card-face[class*="special-"] { background: var(--rope); color: var(--ink-dark); font-size: 18px; border-color: var(--rope-dark); }
 
 /* Cartes "perturbatrices" (annulent/renversent le pli) : distinguées visuellement des cartes tactiques */
 .card-face.special-WHALE,
@@ -269,9 +275,9 @@ button:disabled { opacity: 0.5; cursor: default; }
   background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
   border: 12px solid var(--rope);
   border-radius: 50% / 34%;
-  padding: 28px 16px 150px;
+  padding: 28px 16px 260px;
   margin: 16px 0 60px;
-  min-height: 420px;
+  min-height: 65vh;
   box-shadow:
     inset 0 0 0 3px var(--rope-dark),
     inset 0 0 50px rgba(0,0,0,0.55),
@@ -337,20 +343,20 @@ button:disabled { opacity: 0.5; cursor: default; }
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 18px;
-  min-height: 150px;
-  margin: 12px auto 24px;
+  gap: 20px;
+  min-height: 185px;
+  margin: 16px auto 28px;
 }
 
 .trick-play { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.trick-play .card-face { width: 78px; height: 115px; cursor: default; font-size: 22px; }
-.trick-play-name { font-size: 12px; opacity: 0.9; color: var(--ink); }
+.trick-play .card-face { width: 98px; height: 144px; cursor: default; font-size: 27px; }
+.trick-play-name { font-size: 13px; opacity: 0.9; color: var(--ink); }
 
 .hand-fan {
   position: relative;
-  height: 180px;
+  height: 220px;
   margin: 0 auto;
-  max-width: 560px;
+  max-width: 720px;
 }
 
 .hand-fan .card-face {
