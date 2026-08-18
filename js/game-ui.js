@@ -34,6 +34,13 @@ const els = {
   roundLabel: document.getElementById('roundLabel'),
   errorMsg: document.getElementById('errorMsg'),
   finalScoreboard: document.getElementById('finalScoreboard'),
+  roundStarterBid: document.getElementById('roundStarterBid'),
+  roundStarterPlay: document.getElementById('roundStarterPlay'),
+  myBidIndicator: document.getElementById('myBidIndicator'),
+  zoomOverlay: document.getElementById('zoomOverlay'),
+  infoBtn: document.getElementById('infoBtn'),
+  rulesOverlay: document.getElementById('rulesOverlay'),
+  rulesCloseBtn: document.getElementById('rulesCloseBtn'),
 };
 
 function showError(msg) {
@@ -73,11 +80,30 @@ function specialCopyNumber(card) {
   return parseInt(parts[1], 10) + 1;
 }
 
+// Affiche une version agrandie de la carte au centre de l'écran (zoom au
+// clic/tap, utile sur mobile où il n'y a pas de survol souris).
+function openCardZoom(card) {
+  els.zoomOverlay.innerHTML = '';
+  els.zoomOverlay.appendChild(cardEl(card, { zoomed: true }));
+  els.zoomOverlay.classList.add('open');
+}
+els.zoomOverlay.addEventListener('click', () => els.zoomOverlay.classList.remove('open'));
+
+// Aide-mémoire "qui bat qui" (bouton ℹ️ dans l'en-tête).
+els.infoBtn.addEventListener('click', () => els.rulesOverlay.classList.add('open'));
+els.rulesCloseBtn.addEventListener('click', () => els.rulesOverlay.classList.remove('open'));
+els.rulesOverlay.addEventListener('click', (e) => {
+  if (e.target === els.rulesOverlay) els.rulesOverlay.classList.remove('open');
+});
+
 function cardEl(card, opts) {
   opts = opts || {};
   const div = document.createElement('div');
   const suitClass = card.kind === 'NUMBERED' ? `suit-${card.suit}` : `special-${card.type}`;
-  div.className = `card-face ${suitClass}` + (opts.disabled ? ' disabled' : '') + (opts.faceDown ? ' face-down' : '');
+  div.className = `card-face ${suitClass}`
+    + (opts.disabled ? ' disabled' : '')
+    + (opts.displayOnly ? ' display-only' : '')
+    + (opts.faceDown ? ' face-down' : '');
   if (opts.faceDown) {
     attachCardImage(div, [`${CARD_IMAGES_DIR}/back.png`]);
   } else {
@@ -97,6 +123,10 @@ function cardEl(card, opts) {
   }
   if (opts.onClick && !opts.disabled) {
     div.addEventListener('click', () => opts.onClick(card));
+  } else if (!opts.faceDown && !opts.zoomed) {
+    // Carte non-jouable (main pendant la mise, cartes du pli) : cliquer zoome
+    // directement, pas besoin d'une icône séparée.
+    div.addEventListener('click', () => openCardZoom(card));
   }
   return div;
 }
@@ -114,8 +144,8 @@ function layoutFan(container) {
   if (n === 0) return;
   const mid = (n - 1) / 2;
   const anglePerCard = Math.min(9, Math.max(4, 44 / Math.max(n - 1, 1)));
-  const spacing = Math.max(16, 70 - n * 4);
-  const maxLift = 20;
+  const spacing = Math.max(23, 100 - n * 6);
+  const maxLift = 29;
   cardEls.forEach((el, i) => {
     const offset = i - mid;
     const angle = offset * anglePerCard;
@@ -188,15 +218,25 @@ function renderLobby(room) {
 
 let myBidChoice = null;
 
+// Qui débute le premier pli de la manche (tour de jeu dans le sens des
+// aiguilles d'une montre, déterminé par trickLeaderIndex).
+function roundStarterText(room) {
+  const playerIds = room.players.map((p) => p.id);
+  const starterId = playerIds[room.trickLeaderIndex];
+  const starterName = starterId === myId ? 'Toi' : playerName_(room, starterId);
+  return `🎯 ${starterName} commence cette manche`;
+}
+
 function renderBidding(room) {
   showView('biddingView');
+  els.roundStarterBid.textContent = roundStarterText(room);
   renderOpponents(els.opponentsRowBid, room, {
     statusFor: (p) => (room.bids[p.id] !== null && room.bids[p.id] !== undefined ? '✓ a misé' : '… réfléchit'),
   });
 
   const hand = room.hands[myId] || [];
   els.handDisplay.innerHTML = '';
-  hand.forEach((c) => els.handDisplay.appendChild(cardEl(c, { disabled: true })));
+  hand.forEach((c) => els.handDisplay.appendChild(cardEl(c, { displayOnly: true })));
   layoutFan(els.handDisplay);
 
   els.bidSelect.innerHTML = '';
@@ -226,10 +266,17 @@ function renderPlaying(room) {
   els.turnIndicator.textContent = myTurn
     ? 'À toi de jouer !'
     : `Tour de ${playerName_(room, playerIds[room.turnIndex])}...`;
+  els.roundStarterPlay.textContent = roundStarterText(room);
+  const myTricksWon = (room.tricksWon && room.tricksWon[myId]) || 0;
+  els.myBidIndicator.textContent = `Ta mise : ${room.bids[myId]} · ${myTricksWon} pli(s) gagné(s)`;
 
   renderOpponents(els.opponentsRow, room, {
     activeId: playerIds[room.turnIndex],
-    statusFor: (p, count) => (playerIds[room.turnIndex] === p.id ? 'à son tour' : `${count} carte(s)`),
+    statusFor: (p, count) => {
+      const turnTag = playerIds[room.turnIndex] === p.id ? ' · à son tour' : '';
+      const tricksWon = (room.tricksWon && room.tricksWon[p.id]) || 0;
+      return `${tricksWon}/${room.bids[p.id]} plis · ${count} carte(s)${turnTag}`;
+    },
   });
 
   els.trickArea.innerHTML = '';

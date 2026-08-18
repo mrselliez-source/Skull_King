@@ -103,6 +103,75 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 .room-code strong { color: var(--rope); letter-spacing: 1px; }
 
+.header-right { display: flex; align-items: center; gap: 10px; }
+
+.info-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.rules-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 4, 0.8);
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+.rules-overlay.open { display: flex; }
+
+.rules-card {
+  position: relative;
+  background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
+  border: 6px solid var(--rope);
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+}
+
+.rules-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rules-diagram { width: 100%; max-width: 320px; display: block; margin: 8px auto; }
+.rules-node { fill: var(--parchment); stroke: var(--rope); stroke-width: 3; }
+.rules-node-emoji { font-size: 30px; text-anchor: middle; dominant-baseline: middle; }
+.rules-node-label {
+  font-family: 'Pirata One', serif;
+  font-size: 15px;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+.rules-diagram-label {
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  fill: var(--rope);
+  text-anchor: middle;
+}
+
 .scoreboard {
   display: flex;
   flex-wrap: wrap;
@@ -123,15 +192,15 @@ button:disabled { opacity: 0.5; cursor: default; }
 .player-list { padding-left: 20px; }
 
 .card-face {
-  width: 60px;
-  height: 88px;
-  border-radius: 6px;
+  width: 86px;
+  height: 127px;
+  border-radius: 8px;
   border: 2px solid var(--deck-dark);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 26px;
   background: var(--parchment) url('../images/textures/parchment.jpg') center / cover;
   color: var(--ink-dark);
   cursor: pointer;
@@ -143,11 +212,15 @@ button:disabled { opacity: 0.5; cursor: default; }
   overflow: hidden;
 }
 
+/* Cartes d'information seulement (main visible pendant la mise) : bien
+   lisibles, non grisées, juste sans curseur "cliquable". */
+.card-face.display-only { cursor: default; }
+
 .card-face.disabled { opacity: 0.5; cursor: default; }
 
 .card-face.face-down,
 .mini-card-back {
-  background: repeating-linear-gradient(135deg, var(--deck-dark), var(--deck-dark) 6px, var(--ink-dark) 6px, var(--ink-dark) 12px);
+  background: repeating-linear-gradient(135deg, var(--parchment), var(--parchment) 6px, #d8c7a0 6px, #d8c7a0 12px);
 }
 .card-face.face-down::after {
   content: '\2620';
@@ -156,9 +229,9 @@ button:disabled { opacity: 0.5; cursor: default; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  color: var(--rope);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  font-size: 34px;
+  color: var(--deck-dark);
+  text-shadow: 0 1px 1px rgba(255,255,255,0.4);
 }
 
 .card-face.suit-GREEN { border-color: var(--green); color: var(--green); }
@@ -166,7 +239,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .card-face.suit-YELLOW { border-color: var(--yellow); color: #8a5f14; }
 .card-face.suit-BLACK { border-color: var(--black); background: #221a10; color: var(--ink); }
 
-.card-face[class*="special-"] { background: var(--rope); color: var(--ink-dark); font-size: 11px; border-color: var(--rope-dark); }
+.card-face[class*="special-"] { background: var(--rope); color: var(--ink-dark); font-size: 15px; border-color: var(--rope-dark); }
 
 /* Cartes "perturbatrices" (annulent/renversent le pli) : distinguées visuellement des cartes tactiques */
 .card-face.special-WHALE,
@@ -196,9 +269,9 @@ button:disabled { opacity: 0.5; cursor: default; }
   background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
   border: 12px solid var(--rope);
   border-radius: 50% / 34%;
-  padding: 28px 16px 100px;
+  padding: 28px 16px 150px;
   margin: 16px 0 60px;
-  min-height: 320px;
+  min-height: 420px;
   box-shadow:
     inset 0 0 0 3px var(--rope-dark),
     inset 0 0 50px rgba(0,0,0,0.55),
@@ -261,22 +334,23 @@ button:disabled { opacity: 0.5; cursor: default; }
 .trick-area {
   position: relative;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 18px;
-  min-height: 100px;
-  margin: 12px auto;
+  min-height: 150px;
+  margin: 12px auto 24px;
 }
 
 .trick-play { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.trick-play .card-face { width: 56px; height: 82px; cursor: default; }
+.trick-play .card-face { width: 78px; height: 115px; cursor: default; font-size: 22px; }
 .trick-play-name { font-size: 12px; opacity: 0.9; color: var(--ink); }
 
 .hand-fan {
   position: relative;
-  height: 128px;
+  height: 180px;
   margin: 0 auto;
-  max-width: 480px;
+  max-width: 560px;
 }
 
 .hand-fan .card-face {
@@ -288,9 +362,37 @@ button:disabled { opacity: 0.5; cursor: default; }
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.hand-fan .card-face:not(.disabled):hover {
-  transform: translateX(-50%) rotate(var(--rot, 0deg)) translateY(calc(var(--lift, 0px) - 16px));
-  box-shadow: 0 10px 18px rgba(0,0,0,0.55);
+.hand-fan .card-face:hover {
+  transform: translateX(-50%) rotate(var(--rot, 0deg)) translateY(calc(var(--lift, 0px) - 16px)) scale(1.5);
+  box-shadow: 0 14px 24px rgba(0,0,0,0.6);
+  z-index: 999 !important;
+}
+
+.trick-play .card-face:hover {
+  transform: scale(1.5);
+  box-shadow: 0 14px 24px rgba(0,0,0,0.6);
+  z-index: 999;
+  position: relative;
+}
+
+.zoom-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 4, 0.8);
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  cursor: zoom-out;
+}
+.zoom-overlay.open { display: flex; }
+.zoom-overlay .card-face {
+  width: min(78vw, 360px);
+  height: auto;
+  aspect-ratio: 300 / 440;
+  font-size: clamp(28px, 12vw, 64px);
+  cursor: zoom-out;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
 }
 
 .bid-picker { display: flex; gap: 8px; align-items: center; }
@@ -300,6 +402,18 @@ button:disabled { opacity: 0.5; cursor: default; }
   font-size: 20px;
   margin-bottom: 8px;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.round-starter {
+  font-size: 13px;
+  opacity: 0.85;
+  margin: -4px 0 10px;
+}
+
+.my-bid-indicator {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: -4px 0 10px;
 }
 
 .wildcard-choice {

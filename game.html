@@ -13,7 +13,10 @@
 <main class="game">
   <header class="game-header">
     <div class="room-code">Salle : <strong id="roomCodeLabel">…</strong></div>
-    <div id="roundLabel" class="round-label"></div>
+    <div class="header-right">
+      <div id="roundLabel" class="round-label"></div>
+      <button id="infoBtn" class="info-btn" type="button" title="Qui bat qui ?">ℹ️</button>
+    </div>
   </header>
 
   <section id="scoreboard" class="scoreboard"></section>
@@ -28,6 +31,7 @@
 
   <section id="biddingView" class="view hidden">
     <h2>À combien de plis penses-tu gagner ?</h2>
+    <p id="roundStarterBid" class="round-starter"></p>
     <div class="table-surface">
       <div id="opponentsRowBid" class="opponents-row"></div>
       <div id="handDisplay" class="hand-fan"></div>
@@ -41,6 +45,8 @@
 
   <section id="playingView" class="view hidden">
     <div id="turnIndicator" class="turn-indicator"></div>
+    <p id="roundStarterPlay" class="round-starter"></p>
+    <p id="myBidIndicator" class="my-bid-indicator"></p>
     <div class="table-surface">
       <div id="opponentsRow" class="opponents-row"></div>
       <div id="trickArea" class="trick-area"></div>
@@ -60,6 +66,39 @@
 
   <p id="errorMsg" class="error"></p>
 </main>
+
+<div id="rulesOverlay" class="rules-overlay">
+  <div class="rules-card">
+    <button id="rulesCloseBtn" class="rules-close" type="button" aria-label="Fermer">✕</button>
+    <h2>Qui bat qui ?</h2>
+    <svg viewBox="0 0 320 260" class="rules-diagram" role="img" aria-label="Le Commandant bat le Pirate, le Pirate bat la Sirène, la Sirène bat le Commandant">
+      <defs>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#c9a15a" />
+        </marker>
+      </defs>
+      <path d="M150,92 Q100,138 92,163" fill="none" stroke="#c9a15a" stroke-width="3" marker-end="url(#arrowhead)" />
+      <path d="M112,216 Q160,242 203,217" fill="none" stroke="#c9a15a" stroke-width="3" marker-end="url(#arrowhead)" />
+      <path d="M228,168 Q198,112 178,90" fill="none" stroke="#c9a15a" stroke-width="3" marker-end="url(#arrowhead)" />
+      <text x="95" y="130" class="rules-diagram-label">bat</text>
+      <text x="158" y="248" class="rules-diagram-label">bat</text>
+      <text x="223" y="130" class="rules-diagram-label">bat</text>
+      <circle cx="160" cy="55" r="40" class="rules-node" />
+      <text x="160" y="50" class="rules-node-emoji">💀</text>
+      <text x="160" y="112" class="rules-node-label">Commandant</text>
+      <circle cx="75" cy="205" r="40" class="rules-node" />
+      <text x="75" y="200" class="rules-node-emoji">🏴‍☠️</text>
+      <text x="75" y="262" class="rules-node-label">Pirate</text>
+      <circle cx="245" cy="205" r="40" class="rules-node" />
+      <text x="245" y="200" class="rules-node-emoji">🧜‍♀️</text>
+      <text x="245" y="262" class="rules-node-label">Sirène</text>
+    </svg>
+    <p class="hint">Le Commandant bat tout le monde, sauf la Sirène qui l'envoûte. La Sirène bat tout le monde, sauf le Pirate qui s'en méfie. Le Pirate bat tout le monde, sauf le Commandant.</p>
+    <p class="hint">Repli : perd toujours. Tigresse : au choix Pirate ou Repli. Butin : perd toujours, mais forme une alliance avec le vainqueur du pli. Baleine / Raie Manta / Kraken : neutralisent le pli (voir README).</p>
+  </div>
+</div>
+
+<div id="zoomOverlay" class="zoom-overlay"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
