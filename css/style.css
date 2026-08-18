@@ -279,6 +279,23 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 .card-label { line-height: 1.15; word-break: break-word; hyphens: auto; }
 
+/* Choix de la Tigresse (Pirate/Repli) : reste visible même par-dessus un
+   visuel perso, pour que les autres joueurs sachent ce qui a été joué. */
+.wild-as-badge {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(20, 14, 8, 0.85);
+  color: var(--rope);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 4px;
+  padding: 2px 0;
+  z-index: 6;
+}
+
 /* Ton visuel perso (images/cards/*.png) recouvre le rendu par défaut dès
    qu'il est présent — voir images/cards/README.md */
 .card-img {
@@ -448,6 +465,24 @@ button:disabled { opacity: 0.5; cursor: default; }
   margin-bottom: 4px;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
   flex-shrink: 0;
+  transition: font-size 0.15s ease;
+}
+
+/* "À toi de jouer !" : gros et animé pour qu'on ne le manque pas. */
+.turn-indicator.my-turn {
+  font-size: clamp(26px, 7vw, 40px);
+  color: var(--rope);
+  text-shadow: 0 3px 8px rgba(0,0,0,0.6);
+  animation: my-turn-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes my-turn-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.045); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turn-indicator.my-turn { animation: none; }
 }
 
 .round-starter {
@@ -464,19 +499,111 @@ button:disabled { opacity: 0.5; cursor: default; }
   flex-shrink: 0;
 }
 
+/* Popup plein écran pour le choix de la Tigresse : impossible de la manquer. */
 .wildcard-choice {
-  margin-top: 8px;
-  padding: 12px;
-  background: linear-gradient(180deg, rgba(122,84,50,0.4), rgba(91,61,34,0.4));
-  border: 1px solid var(--rope-dark);
-  border-radius: 6px;
-  flex-shrink: 0;
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 4, 0.8);
+  align-items: center;
+  justify-content: center;
+  z-index: 2100;
+  padding: 20px;
+}
+.wildcard-choice-box {
+  background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
+  border: 6px solid var(--rope);
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  text-align: center;
 }
 .wildcard-choice button { display: block; width: 100%; margin-bottom: 8px; }
 
 .hint { opacity: 0.8; font-size: 14px; flex-shrink: 0; }
 
 #finalScoreboard ol { padding-left: 24px; font-size: 18px; font-family: 'Pirata One', serif; }
+
+/* Carte gagnante du pli, mise en avant pendant la pause avant validation. */
+.trick-play.winner .card-face {
+  box-shadow: 0 0 0 3px var(--rope), 0 0 18px 4px rgba(201,161,90,0.8);
+}
+.trick-play.winner .trick-play-name { color: var(--rope); font-weight: 700; }
+.trick-play.voided .card-face { opacity: 0.55; }
+
+.pending-trick-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  font-size: 14px;
+}
+.pending-trick-bar button { margin-top: 0; padding: 6px 12px; }
+
+/* Panneau d'historique : tiroir qui glisse depuis la gauche. */
+.history-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1500;
+}
+.history-backdrop.open { display: block; }
+
+.history-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  max-width: 85vw;
+  background: var(--deck) url('../images/textures/wood-deck.jpg') center / cover;
+  border-right: 6px solid var(--rope);
+  box-shadow: 6px 0 24px rgba(0,0,0,0.6);
+  z-index: 1600;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+.history-panel.open { transform: translateX(0); }
+
+.history-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.history-panel-head h2 { margin: 0; font-size: 1.3rem; }
+
+.history-list {
+  overflow-y: auto;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-entry {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--rope-dark);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+}
+.history-entry-title { font-family: 'Pirata One', serif; font-size: 14px; margin-bottom: 4px; }
+.history-entry-play { display: flex; justify-content: space-between; gap: 6px; opacity: 0.9; }
+.history-entry-play.winner { color: var(--rope); font-weight: 700; opacity: 1; }
+.history-empty { opacity: 0.7; font-size: 13px; }
 
 /* Petits écrans : cartes un peu plus compactes pour que plus de cartes
    tiennent sur une ligne (moins de chances que le pli passe sur 2 rangées

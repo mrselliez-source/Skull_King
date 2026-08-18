@@ -41,6 +41,14 @@ const els = {
   infoBtn: document.getElementById('infoBtn'),
   rulesOverlay: document.getElementById('rulesOverlay'),
   rulesCloseBtn: document.getElementById('rulesCloseBtn'),
+  pendingTrickBar: document.getElementById('pendingTrickBar'),
+  pendingTrickMsg: document.getElementById('pendingTrickMsg'),
+  nextTrickBtn: document.getElementById('nextTrickBtn'),
+  historyBtn: document.getElementById('historyBtn'),
+  historyPanel: document.getElementById('historyPanel'),
+  historyBackdrop: document.getElementById('historyBackdrop'),
+  historyCloseBtn: document.getElementById('historyCloseBtn'),
+  historyList: document.getElementById('historyList'),
 };
 
 function showError(msg) {
@@ -96,6 +104,44 @@ els.rulesOverlay.addEventListener('click', (e) => {
   if (e.target === els.rulesOverlay) els.rulesOverlay.classList.remove('open');
 });
 
+// Historique des plis (tiroir à gauche).
+function openHistory() {
+  els.historyPanel.classList.add('open');
+  els.historyBackdrop.classList.add('open');
+}
+function closeHistory() {
+  els.historyPanel.classList.remove('open');
+  els.historyBackdrop.classList.remove('open');
+}
+els.historyBtn.addEventListener('click', openHistory);
+els.historyCloseBtn.addEventListener('click', closeHistory);
+els.historyBackdrop.addEventListener('click', closeHistory);
+
+function renderHistory(room) {
+  const entries = room.trickHistory || [];
+  if (entries.length === 0) {
+    els.historyList.innerHTML = '<p class="history-empty">Aucun pli joué encore.</p>';
+    return;
+  }
+  els.historyList.innerHTML = entries
+    .slice()
+    .reverse()
+    .map((entry) => {
+      const plays = entry.plays
+        .map((p) => {
+          const isWinner = !entry.voided && p.playerId === entry.winnerId;
+          const wildTag = p.wildAs ? ` → ${Rules.THEME.specialLabels[p.wildAs]}` : '';
+          return `<div class="history-entry-play${isWinner ? ' winner' : ''}"><span>${p.playerName}</span><span>${Rules.cardLabel(p.card)}${wildTag}</span></div>`;
+        })
+        .join('');
+      const title = entry.voided
+        ? `Manche ${entry.round} · Pli ${entry.trickNumber} · annulé`
+        : `Manche ${entry.round} · Pli ${entry.trickNumber} · ${entry.winnerName}`;
+      return `<div class="history-entry"><div class="history-entry-title">${title}</div>${plays}</div>`;
+    })
+    .join('');
+}
+
 function cardEl(card, opts) {
   opts = opts || {};
   const div = document.createElement('div');
@@ -128,6 +174,14 @@ function cardEl(card, opts) {
     // directement, pas besoin d'une icône séparée.
     div.addEventListener('click', () => openCardZoom(card));
   }
+  // La Tigresse cache son choix (Pirate/Repli) même derrière un visuel perso :
+  // ce badge reste visible pour que les autres joueurs voient ce qui a été joué.
+  if (opts.wildAs) {
+    const badge = document.createElement('div');
+    badge.className = 'wild-as-badge';
+    badge.textContent = Rules.THEME.specialLabels[opts.wildAs];
+    div.appendChild(badge);
+  }
   return div;
 }
 
@@ -146,9 +200,14 @@ function layoutFanRow(rowCards, containerWidth, cardWidth, rowLift, zBase) {
   const anglePerCard = Math.min(9, Math.max(4, 44 / Math.max(n - 1, 1)));
   // L'écart entre cartes ne doit jamais dépasser ce que l'écran permet
   // d'afficher, sinon les cartes des extrémités sortent de l'écran quand la
-  // main est grande (ex. 10 cartes à la dernière manche).
+  // main est grande (ex. 10 cartes à la dernière manche). Sur petit écran, on
+  // resserre davantage (plus de recouvrement) pour que les cartes restent
+  // grandes et que leur chiffre (coin bas-gauche) reste bien visible.
+  const isSmallScreen = window.innerWidth <= 480;
+  const spacingCeiling = isSmallScreen ? 70 - n * 5 : 126 - n * 7.5;
+  const spacingFloor = isSmallScreen ? 10 : 16;
   const maxSpacingForWidth = n > 1 ? (containerWidth - cardWidth) / (n - 1) : containerWidth;
-  const spacing = Math.max(16, Math.min(126 - n * 7.5, maxSpacingForWidth));
+  const spacing = Math.max(spacingFloor, Math.min(spacingCeiling, maxSpacingForWidth));
   const maxLift = 36;
   rowCards.forEach((el, i) => {
     const offset = i - mid;
@@ -288,22 +347,35 @@ function renderBidding(room) {
 
 let pendingWildCard = null;
 
+// État local (pas dans Firestore) du délai de 3s avant que l'hôte puisse
+// valider le passage au pli suivant. Remis à zéro à chaque nouveau pli en
+// attente (identifié par manche + numéro de pli).
+const nextTrickTimer = { key: null, ready: false, timeoutId: null };
+
 function renderPlaying(room) {
   showView('playingView');
   const playerIds = room.players.map((p) => p.id);
-  const myTurn = playerIds[room.turnIndex] === myId;
+  const pending = room.pendingTrick || null;
+  const myTurn = !pending && playerIds[room.turnIndex] === myId;
 
-  els.turnIndicator.textContent = myTurn
-    ? 'À toi de jouer !'
-    : `Tour de ${playerName_(room, playerIds[room.turnIndex])}...`;
+  if (pending) {
+    els.turnIndicator.textContent = pending.voided
+      ? '⚡ Le pli est annulé !'
+      : `🏆 ${playerName_(room, pending.winnerId)} remporte le pli !`;
+  } else {
+    els.turnIndicator.textContent = myTurn
+      ? 'À toi de jouer !'
+      : `Tour de ${playerName_(room, playerIds[room.turnIndex])}...`;
+  }
+  els.turnIndicator.classList.toggle('my-turn', myTurn);
   els.roundStarterPlay.textContent = roundStarterText(room);
   const myTricksWon = (room.tricksWon && room.tricksWon[myId]) || 0;
   els.myBidIndicator.textContent = `Ta mise : ${room.bids[myId]} · ${myTricksWon} pli(s) gagné(s)`;
 
   renderOpponents(els.opponentsRow, room, {
-    activeId: playerIds[room.turnIndex],
+    activeId: pending ? null : playerIds[room.turnIndex],
     statusFor: (p, count) => {
-      const turnTag = playerIds[room.turnIndex] === p.id ? ' · à son tour' : '';
+      const turnTag = !pending && playerIds[room.turnIndex] === p.id ? ' · à son tour' : '';
       const tricksWon = (room.tricksWon && room.tricksWon[p.id]) || 0;
       return `${tricksWon}/${room.bids[p.id]} plis · ${count} carte(s)${turnTag}`;
     },
@@ -312,14 +384,40 @@ function renderPlaying(room) {
   els.trickArea.innerHTML = '';
   room.currentTrick.forEach((play) => {
     const wrap = document.createElement('div');
-    wrap.className = 'trick-play';
-    wrap.appendChild(cardEl(play.card));
+    const isWinner = pending && !pending.voided && play.playerId === pending.winnerId;
+    wrap.className = 'trick-play' + (isWinner ? ' winner' : '') + (pending && pending.voided ? ' voided' : '');
+    wrap.appendChild(cardEl(play.card, { wildAs: play.wildAs }));
     const label = document.createElement('div');
     label.className = 'trick-play-name';
     label.textContent = playerName_(room, play.playerId);
     wrap.appendChild(label);
     els.trickArea.appendChild(wrap);
   });
+
+  // Pli complet : on laisse les cartes affichées au moins 3s, puis l'hôte
+  // doit cliquer "Pli suivant" pour continuer. Personne ne peut jouer pendant ce temps.
+  if (pending) {
+    els.pendingTrickBar.classList.remove('hidden');
+    const key = `${room.round}-${room.trickCount}`;
+    const isHost = room.hostId === myId;
+    els.nextTrickBtn.classList.toggle('hidden', !isHost);
+    if (nextTrickTimer.key !== key) {
+      nextTrickTimer.key = key;
+      nextTrickTimer.ready = false;
+      if (nextTrickTimer.timeoutId) clearTimeout(nextTrickTimer.timeoutId);
+      nextTrickTimer.timeoutId = setTimeout(() => {
+        nextTrickTimer.ready = true;
+        els.nextTrickBtn.disabled = false;
+        els.pendingTrickMsg.textContent = isHost ? 'Prêt à continuer.' : 'En attente de l\'hôte...';
+      }, 3000);
+    }
+    els.nextTrickBtn.disabled = !nextTrickTimer.ready;
+    els.pendingTrickMsg.textContent = nextTrickTimer.ready
+      ? (isHost ? 'Prêt à continuer.' : 'En attente de l\'hôte...')
+      : 'Un instant...';
+  } else {
+    els.pendingTrickBar.classList.add('hidden');
+  }
 
   const hand = room.hands[myId] || [];
   const legal = myTurn ? Rules.legalPlays(hand, room.currentTrick) : [];
@@ -337,6 +435,16 @@ function renderPlaying(room) {
   });
   layoutFan(els.handDisplayPlay);
 }
+
+els.nextTrickBtn.addEventListener('click', async () => {
+  els.nextTrickBtn.disabled = true;
+  try {
+    await Room.confirmNextTrick(roomCode);
+  } catch (e) {
+    showError('Erreur : ' + e.message);
+    els.nextTrickBtn.disabled = false;
+  }
+});
 
 async function onCardClick(room, card) {
   if (card.kind === 'SPECIAL' && card.type === 'WILDCARD') {
@@ -412,6 +520,7 @@ Room.subscribeRoom(roomCode, async (room) => {
   }
   showError('');
   renderScoreboard(room);
+  renderHistory(room);
 
   if (room.status === 'lobby') renderLobby(room);
   else if (room.status === 'bidding') renderBidding(room);

@@ -15,6 +15,7 @@
     <div class="room-code">Salle : <strong id="roomCodeLabel">…</strong></div>
     <div class="header-right">
       <div id="roundLabel" class="round-label"></div>
+      <button id="historyBtn" class="info-btn" type="button" title="Historique des plis">📜</button>
       <button id="infoBtn" class="info-btn" type="button" title="Qui bat qui ?">ℹ️</button>
     </div>
   </header>
@@ -50,12 +51,19 @@
     <div class="table-surface">
       <div id="opponentsRow" class="opponents-row"></div>
       <div id="trickArea" class="trick-area"></div>
+      <div id="pendingTrickBar" class="pending-trick-bar hidden">
+        <span id="pendingTrickMsg"></span>
+        <button id="nextTrickBtn" class="hidden" disabled>Pli suivant</button>
+      </div>
       <div id="handDisplayPlay" class="hand-fan"></div>
     </div>
     <div id="wildcardChoice" class="wildcard-choice hidden">
-      <p>Cette carte Tigresse : la jouer comme...</p>
-      <button id="wildRaiderBtn">Pirate (bat tout sauf Commandant)</button>
-      <button id="wildRetreatBtn">Repli (perd toujours)</button>
+      <div class="wildcard-choice-box">
+        <h2>Tigresse</h2>
+        <p>Tu joues cette carte comme...</p>
+        <button id="wildRaiderBtn">🏴‍☠️ Pirate (bat tout sauf Commandant)</button>
+        <button id="wildRetreatBtn">🏳️ Repli (perd toujours)</button>
+      </div>
     </div>
   </section>
 
@@ -99,6 +107,15 @@
 </div>
 
 <div id="zoomOverlay" class="zoom-overlay"></div>
+
+<div id="historyBackdrop" class="history-backdrop"></div>
+<aside id="historyPanel" class="history-panel">
+  <div class="history-panel-head">
+    <h2>Historique</h2>
+    <button id="historyCloseBtn" class="rules-close" type="button" aria-label="Fermer">✕</button>
+  </div>
+  <div id="historyList" class="history-list"></div>
+</aside>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>

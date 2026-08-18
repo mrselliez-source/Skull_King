@@ -39,6 +39,7 @@ async function createRoom(playerName) {
     players: [{ id: playerId, name: playerName }],
     round: 0,
     totals: { [playerId]: 0 },
+    trickHistory: [],
   });
   localStorage.setItem('playerName', playerName);
   return { roomCode: code, playerId };
@@ -117,6 +118,9 @@ async function playCard(roomCode, playerId, card, wildAs) {
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const room = snap.data();
+    // Le pli est complet et en attente que l'hôte valide le passage au pli
+    // suivant : plus personne ne peut jouer en attendant.
+    if (room.pendingTrick) throw new Error('trick-pending');
     const playerIds = room.players.map((p) => p.id);
     if (playerIds[room.turnIndex] !== playerId) throw new Error('not-your-turn');
     const hand = room.hands[playerId];
@@ -134,8 +138,14 @@ async function playCard(roomCode, playerId, card, wildAs) {
   });
 }
 
+function playerNameIn(room, id) {
+  const p = room.players.find((pl) => pl.id === id);
+  return p ? p.name : '???';
+}
+
 // Appelé uniquement par le client hôte à chaque mise à jour de la salle : fait
-// avancer la partie (fin de mise -> jeu, pli complet -> résolution, manche finie -> suivante).
+// avancer la partie (fin de mise -> jeu, pli complet -> calcul du résultat en
+// attente de validation par l'hôte).
 async function hostAdvance(roomCode, room) {
   const playerIds = room.players.map((p) => p.id);
   const ref = db.collection(ROOMS).doc(roomCode);
@@ -148,81 +158,123 @@ async function hostAdvance(roomCode, room) {
     return;
   }
 
+  // Le pli est complet mais attend déjà la validation de l'hôte : rien à faire
+  // de plus ici, c'est confirmNextTrick qui prendra le relais.
+  if (room.pendingTrick) return;
+
   if (room.status === 'playing' && room.currentTrick.length === playerIds.length) {
     const result = Rules.resolveTrick(room.currentTrick);
-    const tricksWon = { ...room.tricksWon };
-    // Un pli annulé par le Kraken n'est remporté par personne : personne ne
-    // marque de pli, mais le "vainqueur théorique" débute quand même le pli suivant.
-    if (!result.voided) {
-      tricksWon[result.winnerId] = (tricksWon[result.winnerId] || 0) + 1;
-    }
-
-    const bonuses = {};
-    playerIds.forEach((id) => (bonuses[id] = 0));
-    // Le vainqueur du pli capture toutes les cartes qui s'y trouvent, y compris
-    // les 14 joués par d'autres joueurs (rien n'est capturé si le pli est annulé).
-    result.fourteens.forEach((p) => {
-      bonuses[result.winnerId] += p.card.suit === 'BLACK' ? 20 : 10;
+    const historyEntry = {
+      round: room.round,
+      trickNumber: room.trickCount + 1,
+      plays: room.currentTrick.map((p) => ({
+        playerId: p.playerId,
+        playerName: playerNameIn(room, p.playerId),
+        card: p.card,
+        wildAs: p.wildAs || null,
+      })),
+      voided: result.voided,
+      winnerId: result.voided ? null : result.winnerId,
+      winnerName: result.voided ? null : playerNameIn(room, result.winnerId),
+    };
+    await ref.update({
+      pendingTrick: result,
+      trickHistory: firebase.firestore.FieldValue.arrayUnion(historyEntry),
     });
-    bonuses[result.winnerId] += 30 * result.raidersCapturedByCommander;
-    bonuses[result.winnerId] += 20 * result.enchantressesCapturedByRaider;
-    if (result.capturedCommander) bonuses[result.winnerId] += 40;
+  }
+}
 
-    const bonusTotals = { ...(room.bonusTotals || {}) };
-    playerIds.forEach((id) => (bonusTotals[id] = (bonusTotals[id] || 0) + (bonuses[id] || 0)));
+// Appelé par l'hôte quand il clique sur "Pli suivant" : applique réellement le
+// résultat du pli en attente (scores, alliances, fin de manche éventuelle)
+// puis passe au pli suivant.
+async function confirmNextTrick(roomCode) {
+  const ref = db.collection(ROOMS).doc(roomCode);
+  const snap = await ref.get();
+  const room = snap.data();
+  if (!room.pendingTrick) return;
+  const result = room.pendingTrick;
+  const playerIds = room.players.map((p) => p.id);
 
-    const alliances = [...(room.alliances || []), ...result.alliances];
+  const tricksWon = { ...room.tricksWon };
+  // Un pli annulé par le Kraken n'est remporté par personne : personne ne
+  // marque de pli, mais le "vainqueur théorique" débute quand même le pli suivant.
+  if (!result.voided) {
+    tricksWon[result.winnerId] = (tricksWon[result.winnerId] || 0) + 1;
+  }
 
-    const winnerIndex = playerIds.indexOf(result.winnerId);
-    const trickCount = room.trickCount + 1;
+  const bonuses = {};
+  playerIds.forEach((id) => (bonuses[id] = 0));
+  // Le vainqueur du pli capture toutes les cartes qui s'y trouvent, y compris
+  // les 14 joués par d'autres joueurs (rien n'est capturé si le pli est annulé).
+  result.fourteens.forEach((p) => {
+    bonuses[result.winnerId] += p.card.suit === 'BLACK' ? 20 : 10;
+  });
+  bonuses[result.winnerId] += 30 * result.raidersCapturedByCommander;
+  bonuses[result.winnerId] += 20 * result.enchantressesCapturedByRaider;
+  if (result.capturedCommander) bonuses[result.winnerId] += 40;
 
-    if (trickCount >= room.cardsThisRound) {
-      // fin de manche : calcule les scores et passe à la suite
-      const totals = { ...room.totals };
-      const roundScores = {};
-      playerIds.forEach((id) => {
-        roundScores[id] = Rules.scoreBid(room.round, room.bids[id], tricksWon[id]) + (bonusTotals[id] || 0);
-      });
-      // Bonus d'alliance (Butin) : +20 chacun si les deux membres de l'alliance
-      // ont exactement réalisé leur mise sur cette manche.
-      alliances.forEach(({ a, b }) => {
-        if (room.bids[a] === tricksWon[a] && room.bids[b] === tricksWon[b]) {
-          roundScores[a] += 20;
-          roundScores[b] += 20;
-        }
-      });
-      playerIds.forEach((id) => {
-        totals[id] = (totals[id] || 0) + roundScores[id];
-      });
+  const bonusTotals = { ...(room.bonusTotals || {}) };
+  playerIds.forEach((id) => (bonusTotals[id] = (bonusTotals[id] || 0) + (bonuses[id] || 0)));
 
-      const nextRound = room.round + 1;
-      if (nextRound > room.maxRounds) {
-        await ref.update({
-          status: 'gameEnd',
-          currentTrick: [],
-          tricksWon,
-          bonusTotals: {},
-          alliances: [],
-          totals,
-          lastRoundScores: roundScores,
-        });
-      } else {
-        await ref.update({ totals, lastRoundScores: roundScores, bonusTotals: {}, alliances: [] });
-        const nextDealer = (room.dealerIndex + 1) % playerIds.length;
-        const freshSnap = await ref.get();
-        await dealRound(ref, freshSnap.data(), playerIds, nextRound, nextDealer);
+  const alliances = [...(room.alliances || []), ...result.alliances];
+
+  const winnerIndex = result.voided ? room.trickLeaderIndex : playerIds.indexOf(result.winnerId);
+  const trickCount = room.trickCount + 1;
+
+  if (trickCount >= room.cardsThisRound) {
+    // fin de manche : calcule les scores et passe à la suite
+    const totals = { ...room.totals };
+    const roundScores = {};
+    playerIds.forEach((id) => {
+      roundScores[id] = Rules.scoreBid(room.round, room.bids[id], tricksWon[id]) + (bonusTotals[id] || 0);
+    });
+    // Bonus d'alliance (Butin) : +20 chacun si les deux membres de l'alliance
+    // ont exactement réalisé leur mise sur cette manche.
+    alliances.forEach(({ a, b }) => {
+      if (room.bids[a] === tricksWon[a] && room.bids[b] === tricksWon[b]) {
+        roundScores[a] += 20;
+        roundScores[b] += 20;
       }
+    });
+    playerIds.forEach((id) => {
+      totals[id] = (totals[id] || 0) + roundScores[id];
+    });
+
+    const nextRound = room.round + 1;
+    if (nextRound > room.maxRounds) {
+      await ref.update({
+        status: 'gameEnd',
+        currentTrick: [],
+        pendingTrick: firebase.firestore.FieldValue.delete(),
+        tricksWon,
+        bonusTotals: {},
+        alliances: [],
+        totals,
+        lastRoundScores: roundScores,
+      });
     } else {
       await ref.update({
-        currentTrick: [],
-        trickCount,
-        tricksWon,
-        bonusTotals,
-        alliances,
-        trickLeaderIndex: winnerIndex,
-        turnIndex: winnerIndex,
+        totals,
+        lastRoundScores: roundScores,
+        bonusTotals: {},
+        alliances: [],
+        pendingTrick: firebase.firestore.FieldValue.delete(),
       });
+      const nextDealer = (room.dealerIndex + 1) % playerIds.length;
+      const freshSnap = await ref.get();
+      await dealRound(ref, freshSnap.data(), playerIds, nextRound, nextDealer);
     }
+  } else {
+    await ref.update({
+      currentTrick: [],
+      pendingTrick: firebase.firestore.FieldValue.delete(),
+      trickCount,
+      tricksWon,
+      bonusTotals,
+      alliances,
+      trickLeaderIndex: winnerIndex,
+      turnIndex: winnerIndex,
+    });
   }
 }
 
@@ -235,4 +287,5 @@ window.Room = {
   submitBid,
   playCard,
   hostAdvance,
+  confirmNextTrick,
 };
